@@ -1,46 +1,81 @@
-# Getting Started with Create React App
+ここに Todo アプリをホストしている GitHub Pages の URL を記載
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## 概要
 
-## Available Scripts
+プロジェクトを細かなタスクに細分化し、一つずつ完了させる達成感をもとに、モチベーション向上を目指す todo アプリです。
+React と TypeScript を使用し、データは全てブラウザのローカルストレージに保存されるため、サーバー不要で高速・安全に動作します。
 
-In the project directory, you can run:
+## 機能
 
-### `npm start`
+### 1.タスク管理
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+<div align="center">
+  <img src="./images/1.png" alt="アプリのスクリーンショット" width="800">
+</div>
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+- **プロジェクト単位での管理**:最も大きな単位としてプロジェクトがあり、そこにタスクを追加していくことができる。
 
-### `npm test`
+- **階層化タスク**: 親・子・孫...と無制限にタスクに対して更にそれを細分化したサブタスクを作成可能。
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- **ドラッグ＆ドロップ**: `@hello-pangea/dnd` を採用し、プロジェクトやタスクの並び替えを直感的に操作可能。
+<div align="center">
+  <img src="./images/5.png" alt="アプリのスクリーンショット" width="800">
+</div>
 
-### `npm run build`
+- **進捗の可視化**: タスクの完了状況に応じたプロジェクトごとの進捗バー（％）表示。
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### 2.タスクの詳細
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+<div align="center">
+  <img src="./images/3.png" alt="アプリのスクリーンショット" width="300">
+</div>
+<div align="center">
+  <img src="./images/4.png" alt="アプリのスクリーンショット" width="300">
+</div>
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- **サブタスクの管理**: この画面から、各タスクの子タスクの管理を行える。
+- **期限日の設定**: カレンダーから、期限となる日程を設定できる。
+- **優先度**: 優先度を高・中・低の三段階で設定できる。
+- **習慣化（ルーティン）**: 「毎日」 「平日のみ」などの繰り返し設定。翌日にはタスクの進捗が自動でリセットされる。
 
-### `npm run eject`
+<div align="center">
+  <img src="./images/2.png" alt="アプリのスクリーンショット" width="800">
+</div>
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+- **タグ管理**: カラータグを作成し、タスクに複数割り当て可能。設定画面は画像の通り。
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### 3.ビューモード
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+<div align="center">
+  <img src="./images/6.png" alt="アプリのスクリーンショット" width="800">
+</div>
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+- **今日やること**: 期限日が「今日」のタスク、期限切れタスク、今日の習慣タスクのみを自動抽出し、今日中に確実にやらなければならないものを表示する。この時、子タスクだけが提出期限の場合は、子タスクだけ表示され、親タスクがなにか分かるようになっている。
 
-## Learn More
+<div align="center">
+  <img src="./images/7.png" alt="アプリのスクリーンショット" width="800">
+</div>
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- **全プロジェクト**: すべてのタスクを俯瞰し、整理・計画を行うためのビュー。
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### 設定画面
+
+<div align="center">
+  <img src="./images/8.png" alt="アプリのスクリーンショット" width="800">
+</div>
+
+- **データバックアップ**: JSON 形式でのエクスポート・インポート機能により、データの移行やバックアップが可能。
+- **テーマ変更**: ライト/ダークモードの切り替えおよびアクセントカラーの変更が可能。
+
+## 技術スタック
+
+- **Frontend**: React (v18), TypeScript
+- **Styling**: styled-components
+- **State Management**: React Context API + Custom Hooks
+- **Routing**: React Router
+- **Drag & Drop**: @hello-pangea/dnd
+- **Storage**: LocalStorage (Custom Hook による永続化)
+
+## 開発期間
+
+2025.10.23 ~ 2025.11.18 (約 20 時間)

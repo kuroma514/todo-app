@@ -1,157 +1,244 @@
 // src/components/TaskItem.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
-import { Task, TaskStatus } from '../types';
+import { Task, TaskStatus, Tag } from '../types';
 import { useData } from '../contexts/DataContext';
+import { getTodayString, isOverdue, isDueToday } from '../utils/dateUtils'; // ★ isOverdue, isDueToday を追加
+import { Draggable, Droppable } from '@hello-pangea/dnd';
 
-// ItemWrapper のスタイル
-const ItemWrapper = styled.div`
+const TaskContainer = styled.div`
   display: flex;
-  align-items: center;
-  padding: 8px;
-  margin-bottom: 6px;
+  flex-direction: column;
+  margin-bottom: 1px; 
 `;
 
-const StatusIcon = styled.div<{ status: TaskStatus }>`
-  width: 20px;
-  height: 20px;
+const TaskRow = styled.div<{ status: TaskStatus }>`
+  display: flex;
+  align-items: flex-start; 
+  padding: 4px 8px; 
   border-radius: 4px;
-  margin-right: 10px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: bold;
-
-  ${props => {
-    switch (props.status) {
-      case 'Todo':
-        return `border: 2px solid #888; background-color: transparent;`;
-      case 'InProgress':
-        return `border: 2px solid #2998ff; background-color: #2998ff; color: white;`;
-      case 'Done':
-        return `border: 2px solid #33a34a; background-color: #33a34a; color: white;`;
-    }
-  }}
-`;
-
-const TaskContent = styled.span<{ status: TaskStatus }>`
-  flex: 1;
-  text-decoration: ${props => (props.status === 'Done' ? 'line-through' : 'none')};
-  color: inherit;
-`;
-
-interface Props { task: Task }
-
-export const TaskItem: React.FC<Props> = ({ task }) => {
-  const { setAppData } = useData();
-
-  const getNextStatus = (current: TaskStatus): TaskStatus => {
-    if (current === 'Todo') return 'InProgress';
-    if (current === 'InProgress') return 'Done';
-    return 'Todo';
-  };
-
-  const handleStatusChange = () => {
-    const next = getNextStatus(task.status);
-    setAppData(prev => ({ ...prev, tasks: prev.tasks.map(t => t.id === task.id ? { ...t, status: next } : t) }));
-  };
-
-  return (
-    <ItemWrapper>
-      <StatusIcon status={task.status} onClick={handleStatusChange}>
-        {task.status === 'Done' ? '✓' : task.status === 'InProgress' ? '...' : ''}
-      </StatusIcon>
-      <TaskContent status={task.status}>{task.content}</TaskContent>
-    </ItemWrapper>
-  );
-};
-// src/components/TaskItem.tsx
-import React from 'react';
-import styled from 'styled-components';
-import { Task, TaskStatus } from '../types'; // TaskStatus をインポート
-import { useData } from '../contexts/DataContext'; // ★ useDataをインポート
-
-// ... ItemWrapper のスタイル定義 ...
-// ★ 応急処置: ItemWrapper に基本的なレイアウトとコントラストを付与
-const ItemWrapper = styled.div<{ isSubtask?: boolean }>`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 6px;
-  /* 背景が暗めなので文字は明るくしておく */
-  color: #eee;
-  /* サブタスク用のインデント */
-  margin-left: ${props => (props.isSubtask ? '30px' : '0px')};
-`;
-
-// ★ 変更点: StatusIconのスタイルを status に応じて変える
-const StatusIcon = styled.div<{ status: TaskStatus }>`
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
-  margin-right: 10px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: bold;
-  flex-shrink: 0; /* 縮まないように設定 */
-
-  /* statusの値に応じてスタイルを動的に変更 */
-  ${props => {
-    switch (props.status) {
-      case 'Todo': // 未着手
-        return `
-          border: 2px solid #888;
-          background-color: transparent;
-        `;
-      case 'InProgress': // 作業中
-        return `
-          border: 2px solid #2998ff;
-          background-color: #2998ff;
-          color: white;
-        `;
-      case 'Done': // 完了
-        return `
-          border: 2px solid #33a34a;
-          background-color: #33a34a;
-          color: white;
-        `;
-    }
-  }}
-`;
-
-// ★ 追加: 完了タスクのスタイル
-const TaskContent = styled.span<{ status: TaskStatus }>`
-  flex: 1;
-  font-size: 0.95rem;
-  /* 完了したら取り消し線と色を薄くする */
-  text-decoration: ${props => (props.status === 'Done' ? 'line-through' : 'none')};
-  color: ${props => (props.status === 'Done' ? '#888' : '#fff')};
-  /* 長いテキストは折り返して見切れないようにする */
-  word-break: break-word;
   
-  /* ★ 追加: クリックできるようにカーソルを変更 */
+  background-color: ${props => props.theme.item};
+  border: 1px solid transparent; 
+
+  opacity: ${props => (props.status === 'Done' ? 0.6 : 1)};
+  transition: all 0.2s ease-out;
+
+  &:hover {
+    background-color: ${props => props.theme.itemHover};
+  }
+`;
+
+const ExpandButton = styled.button`
+  background: none;
+  border: none;
+  color: ${props => props.theme.subText};
   cursor: pointer;
-  padding: 4px 0; /* クリック領域を少し広げる */
+  font-size: 0.7rem; 
+  width: 16px;       
+  height: 16px;      
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 2px;
+  margin-top: 4px;   
+  padding: 0;
+  
+  &:hover {
+    color: ${props => props.theme.text};
+    background-color: rgba(255,255,255,0.1);
+    border-radius: 2px;
+  }
+`;
+
+const ExpandSpacer = styled.div`
+  width: 18px; 
+  flex-shrink: 0;
+`;
+
+const ChildrenContainer = styled.div`
+  margin-left: 18px; 
+  border-left: 1px solid ${props => props.theme.border}; 
+  padding-left: 0px; 
+`;
+
+const SubtaskMark = styled.div`
+  color: ${props => props.theme.subText};
+  font-size: 0.8rem;
+  line-height: 1;
+  margin-right: 6px;
+  margin-top: 5px; 
+  user-select: none;
+  opacity: 0.5;
+`;
+
+const StatusIcon = styled.div<{ status: TaskStatus }>`
+  width: 16px; 
+  height: 16px;
+  border-radius: 4px; 
+  margin-right: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px; 
+  font-weight: bold;
+  flex-shrink: 0;
+  margin-top: 3px; 
+  transition: all 0.2s ease;
+
+  ${props => {
+    switch (props.status) {
+      case 'Todo': 
+        return `
+          border: 1.5px solid ${props.theme.subText};
+          background-color: transparent;
+          &:hover { border-color: ${props.theme.accent}; }
+        `;
+      case 'InProgress':
+        return `
+          border: 1.5px solid ${props.theme.accent};
+          background-color: ${props.theme.accent};
+          color: white;
+          box-shadow: 0 0 8px ${props.theme.accent}66;
+        `;
+      case 'Done':
+        return `
+          border: 1.5px solid ${props.theme.success}; 
+          background-color: ${props.theme.success};
+          color: white;
+        `;
+    }
+  }}
+`;
+
+const TaskDetailsWrapper = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column; 
+  justify-content: center; 
+  min-height: 22px; 
+`;
+
+const ParentTaskBreadcrumb = styled.div`
+  font-size: 0.7rem; 
+  color: ${props => props.theme.subText};
+  margin-bottom: 0px;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  opacity: 0.8;
+`;
+
+// ★ 追加: タイトルと期限日を横並びにするラッパー
+const TitleRow = styled.div`
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px; /* タイトルと期限日の間隔 */
+`;
+
+const TaskContent = styled.span<{ status: TaskStatus }>`
+  font-size: 0.9rem; 
+  line-height: 1.4;
+  text-decoration: ${props => (props.status === 'Done' ? 'line-through' : 'none')};
+  color: ${props => (props.status === 'Done' ? props.theme.subText : props.theme.text)};
+  cursor: pointer;
+  word-break: break-word;
+  transition: color 0.2s ease;
+`;
+
+// ★ 追加: 期限日バッジ
+const DueDateBadge = styled.span<{ isOverdue: boolean; isToday: boolean }>`
+  font-size: 0.7rem;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: normal;
+  letter-spacing: 0.03em;
+  
+  /* 期限の状態に応じた色分け */
+  color: ${props => 
+    props.isOverdue ? props.theme.danger : 
+    props.isToday ? props.theme.accent : 
+    props.theme.subText};
+  
+  background-color: ${props => 
+    props.isOverdue ? props.theme.danger + '1A' : // 10%透明度
+    props.isToday ? props.theme.accent + '1A' : 
+    'transparent'};
+    
+  border: 1px solid ${props => 
+    props.isOverdue ? props.theme.danger + '40' : // 25%透明度
+    props.isToday ? props.theme.accent + '40' : 
+    props.theme.border};
+`;
+
+const TagListWrapper = styled.div`
+  display: flex;
+  flex-wrap: wrap; 
+  margin-top: 2px; 
+  gap: 4px; 
+`;
+
+const TagBadge = styled.span<{ color: string }>`
+  display: inline-block;
+  font-size: 0.65rem; 
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px; 
+  color: #fff; 
+  background-color: ${props => props.color};
+  opacity: 0.8; 
+  letter-spacing: 0.02em;
 `;
 
 
 interface Props {
   task: Task;
+  defaultExpanded?: boolean;
+  index?: number;
 }
 
-export const TaskItem: React.FC<Props> = ({ task }) => {
+export const TaskItem: React.FC<Props> = ({ task, defaultExpanded = false, index }) => {
+  const { appData, setAppData, setEditingTaskId } = useData();
+  const { tasks: allTasks, tags: allTags } = appData;
+
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+
+  const childTasks = allTasks
+    .filter(t => t.parentId === task.id)
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+  const hasChildren = childTasks.length > 0;
+
   const isSubtask = task.parentId !== null;
+  const getAncestors = (currentTask: Task): Task[] => {
+    const ancestors: Task[] = [];
+    let curr = currentTask;
+    let depth = 0;
+    while (curr.parentId && depth < 10) {
+      const parent = allTasks.find(t => t.id === curr.parentId);
+      if (parent) {
+        ancestors.unshift(parent);
+        curr = parent;
+        depth++;
+      } else {
+        break;
+      }
+    }
+    return ancestors;
+  };
+  const ancestors = task.parentId ? getAncestors(task) : [];
 
-  // ★ 変更点: setEditingTaskId も Context から取得
-  const { setAppData, setEditingTaskId } = useData();
+  const allTagsMap = new Map(allTags.map(tag => [tag.id, tag]));
+  const taskTags: Tag[] = (task.tags || [])
+    .map(tagId => allTagsMap.get(tagId))
+    .filter((tag): tag is Tag => tag !== undefined);
 
-  // ★ 追加: 次の状態を決定する関数
   const getNextStatus = (currentStatus: TaskStatus): TaskStatus => {
     if (currentStatus === 'Todo') return 'InProgress';
     if (currentStatus === 'InProgress') return 'Done';
@@ -159,44 +246,158 @@ export const TaskItem: React.FC<Props> = ({ task }) => {
     return 'Todo';
   };
 
-  // ★ 追加: アイコンクリック時の処理
   const handleStatusChange = () => {
     const nextStatus = getNextStatus(task.status);
+    const isRepeating = task.repeatConfig !== null;
+    let newLastCompletedDate = task.lastCompletedDate;
 
-    // グローバルな状態を更新
+    if (isRepeating && nextStatus === 'Done') {
+      newLastCompletedDate = getTodayString();
+    }
+    if (isRepeating && nextStatus === 'Todo') {
+      newLastCompletedDate = null;
+    }
+
     setAppData(prevData => ({
       ...prevData,
-      // tasks配列をmapでループ処理
       tasks: prevData.tasks.map(t =>
-        // IDが一致するタスクだけ、statusを更新
-        t.id === task.id ? { ...t, status: nextStatus } : t
+        t.id === task.id
+          ? { ...t, status: nextStatus, lastCompletedDate: newLastCompletedDate }
+          : t
       ),
     }));
   };
 
-  // ★ 追加: アイコンに表示する文字
   const getStatusIconContent = (status: TaskStatus) => {
     if (status === 'InProgress') return '...';
     if (status === 'Done') return '✓';
     return '';
   }
 
-  // ★ 追加: タスク名クリック時の処理
   const handleOpenModal = () => {
-    setEditingTaskId(task.id); // グローバルの状態を「このタスクID」にセット
+    setEditingTaskId(task.id);
   };
 
-  return (
-    <ItemWrapper isSubtask={isSubtask}>
-      {/* ★ 変更点: クリックイベントと動的なスタイルを適用 */}
-      <StatusIcon status={task.status} onClick={handleStatusChange}>
-        {getStatusIconContent(task.status)}
-      </StatusIcon>
+  const toggleExpand = (e: React.MouseEvent) => {
+    e.stopPropagation(); 
+    setIsExpanded(!isExpanded);
+  };
 
-      {/* ★ 変更点: TaskContentで囲み、statusを渡し、onClickイベントに handleOpenModal を設定 */}
-      <TaskContent status={task.status} onClick={handleOpenModal}>
-        {task.content}
-      </TaskContent>
-    </ItemWrapper>
+  // ★ 追加: 期限日の表示用フォーマット関数 (MM/DD)
+  const formatDueDate = (dateString: string) => {
+    // "YYYY-MM-DD" -> "MM/DD"
+    return dateString.slice(5).replace('-', '/');
+  };
+
+  // ★ 追加: 期限切れ・今日判定
+  const isOver = isOverdue(task.dueDate);
+  const isToday = isDueToday(task.dueDate);
+
+  const renderContent = () => (
+    <TaskContainer>
+      <TaskRow status={task.status}>
+        {hasChildren ? (
+          <ExpandButton 
+            onClick={toggleExpand}
+            onMouseDown={(e) => e.stopPropagation()} 
+          >
+            {isExpanded ? '▼' : '▶'}
+          </ExpandButton>
+        ) : (
+          <ExpandSpacer />
+        )}
+        
+        {isSubtask && <SubtaskMark>↳</SubtaskMark>}
+
+        <StatusIcon 
+          status={task.status} 
+          onClick={handleStatusChange}
+          onMouseDown={(e) => e.stopPropagation()} 
+        >
+          {getStatusIconContent(task.status)}
+        </StatusIcon>
+        
+        <TaskDetailsWrapper>
+          {ancestors.length > 0 && (
+            <ParentTaskBreadcrumb>
+               {ancestors.map(ancestor => (
+                 <React.Fragment key={ancestor.id}>
+                   {ancestor.content} &gt;{' '}
+                 </React.Fragment>
+               ))}
+            </ParentTaskBreadcrumb>
+          )}
+
+          {/* ★ 変更: TitleRow でタスク名と期限日を囲む */}
+          <TitleRow>
+            <TaskContent status={task.status} onClick={handleOpenModal}>
+              {task.content}
+            </TaskContent>
+
+            {/* 期限日がある場合のみ表示 */}
+            {task.dueDate && (
+              <DueDateBadge isOverdue={isOver} isToday={isToday}>
+                {isOver && "!"} {/* 期限切れならビックリマークもつける */}
+                {formatDueDate(task.dueDate)}
+              </DueDateBadge>
+            )}
+          </TitleRow>
+
+          {taskTags.length > 0 && (
+            <TagListWrapper>
+              {taskTags.map(tag => (
+                <TagBadge key={tag.id} color={tag.color}>
+                  {tag.name}
+                </TagBadge>
+              ))}
+            </TagListWrapper>
+          )}
+        </TaskDetailsWrapper>
+      </TaskRow>
+
+      {isExpanded && hasChildren && (
+        <ChildrenContainer>
+          <Droppable 
+            droppableId={`task-list-sub-${task.id}`}
+            type={`TASK-SUB-${task.id}`}
+          >
+            {(provided) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+              >
+                {childTasks.map((child, i) => (
+                  <TaskItem 
+                    key={child.id} 
+                    task={child} 
+                    index={i} 
+                  />
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </ChildrenContainer>
+      )}
+    </TaskContainer>
   );
+
+  if (typeof index === 'number') {
+    return (
+      <Draggable draggableId={task.id} index={index}>
+        {(provided) => (
+          <div
+            ref={provided.innerRef}
+            {...provided.draggableProps}
+            {...provided.dragHandleProps}
+            style={{ ...provided.draggableProps.style }}
+          >
+            {renderContent()}
+          </div>
+        )}
+      </Draggable>
+    );
+  }
+
+  return renderContent();
 };
