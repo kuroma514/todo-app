@@ -1,4 +1,5 @@
-ここに Todo アプリをホストしている GitHub Pages の URL を記載
+本アプリをホストするGithubPagesのリンク
+https://kuroma514.github.io/todo-app/
 
 ## 概要
 
